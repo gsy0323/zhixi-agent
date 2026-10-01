@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+build/
+deploy/
+artifacts/workorders.db
+artifacts/traces/
+.streamlit/secrets.toml

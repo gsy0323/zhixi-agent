@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>智维Agent · 设备维保决策智能体</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231f5fbf'/%3E%3Ctext x='50' y='50' font-size='62' text-anchor='middle' dominant-baseline='central'%3E%E2%9A%99%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#eef2f8;
+    --surface:#ffffff;
+    --surface-2:#f7f9fc;
+    --line:#e2e8f2;
+    --line-strong:#cfd8e6;
+    --ink:#0f1720;
+    --ink-2:#334155;
+    --muted:#64748b;
+    --faint:#94a3b8;
+    --brand:#1f5fbf;
+    --brand-2:#2a7fd4;
+    --brand-dark:#153f7d;
+    --brand-tint:#eaf1fd;
+    --high:#dc4c4c;
+    --mid:#e2922f;
+    --low:#94a3b8;
+    --ok:#2f9e6f;
+    --r-lg:16px; --r-md:12px; --r-sm:9px;
+    --sh-1:0 1px 2px rgba(15,32,64,.05), 0 1px 3px rgba(15,32,64,.04);
+    --sh-2:0 2px 6px rgba(15,32,64,.06), 0 10px 26px rgba(15,32,64,.06);
+    --sh-3:0 4px 12px rgba(15,32,64,.08), 0 18px 44px rgba(15,32,64,.09);
+    --ease:cubic-bezier(.4,0,.2,1);
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:14.5px/1.7 "Microsoft YaHei","PingFang SC","Hiragino Sans GB",system-ui,-apple-system,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{margin:0;font-weight:700;line-height:1.4;letter-spacing:.2px}
+  a{color:var(--brand);text-decoration:none}
+  .wrap{max-width:1340px;margin:0 auto;padding:0 22px 64px}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ---------------------------------------------------------- 顶部 */
+  header.top{
+    position:relative; overflow:hidden; color:#fff; padding:34px 0 28px; margin-bottom:26px;
+    background:linear-gradient(118deg,#0f2a52 0%,#1f5fbf 52%,#2f88d8 100%);
+  }
+  header.top::before{
+    content:""; position:absolute; inset:0;
+    background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
+    background-size:46px 46px;
+    mask-image:linear-gradient(180deg,rgba(0,0,0,.55),transparent 78%);
+    -webkit-mask-image:linear-gradient(180deg,rgba(0,0,0,.55),transparent 78%);
+  }
+  header.top::after{
+    content:""; position:absolute; width:620px; height:620px; right:-160px; top:-360px;
+    background:radial-gradient(circle,rgba(255,255,255,.22),transparent 66%);
+  }
+  header.top .wrap{position:relative; z-index:1}
+  .brandrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .mark{
+    width:42px;height:42px;border-radius:12px;display:grid;place-items:center;flex:0 0 42px;
+    background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.3); font-size:21px;
+    backdrop-filter:blur(4px);
+  }
+  header.top h1{font-size:23px;letter-spacing:.4px}
+  header.top .sub{margin:9px 0 0; opacity:.9; font-size:13px; max-width:920px; line-height:1.75}
+  header.top .live{
+    display:inline-flex;align-items:center;gap:7px;font-size:12px;
+    background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.26);
+    border-radius:999px; padding:4px 12px 4px 10px;
+  }
+  .dot{width:7px;height:7px;border-radius:50%;background:#5ee6a8;box-shadow:0 0 0 0 rgba(94,230,168,.7);animation:pulse 2.2s infinite}
+  @keyframes pulse{70%{box-shadow:0 0 0 8px rgba(94,230,168,0)}100%{box-shadow:0 0 0 0 rgba(94,230,168,0)}}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  .chip{
+    background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22);
+    border-radius:999px; padding:5px 13px; font-size:12px; letter-spacing:.2px;
+    backdrop-filter:blur(4px);
+  }
+
+  /* ---------------------------------------------------------- 卡片 */
+  .panel{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg);
+    box-shadow:var(--sh-2); padding:22px; margin-bottom:20px;
+  }
+  .panel > h3{
+    font-size:15px;margin-bottom:16px;padding-left:11px;border-left:3px solid var(--brand);
+    display:flex;align-items:center;gap:9px;
+  }
+  .panel > h3 .hint{font-size:12px;color:var(--faint);font-weight:400;margin-left:auto}
+  .grid{display:grid;gap:20px}
+  .g2{grid-template-columns:1fr 1fr}
+  @media(max-width:1040px){.g2{grid-template-columns:1fr}}
+
+  /* KPI */
+  .kpi{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:20px}
+  @media(max-width:1040px){.kpi{grid-template-columns:repeat(2,1fr)}}
+  .kcard{
+    position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--r-lg);padding:17px 19px;box-shadow:var(--sh-1);
+    transition:transform .22s var(--ease), box-shadow .22s var(--ease);
+  }
+  .kcard:hover{transform:translateY(-2px);box-shadow:var(--sh-2)}
+  .kcard::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--kc,var(--brand));opacity:.85}
+  .kcard .k{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .kcard .v{font-size:24px;font-weight:700;margin-top:6px;letter-spacing:.3px;line-height:1.25}
+  .kcard .v small{font-size:13px;font-weight:600;color:var(--muted);margin-left:3px}
+
+  /* ---------------------------------------------------------- 标签页 */
+  .tabs{
+    position:sticky;top:0;z-index:20;display:flex;gap:4px;flex-wrap:wrap;
+    background:rgba(238,242,248,.92); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line-strong); margin-bottom:22px; padding-top:6px;
+  }
+  .tabs button{
+    background:none;border:none;padding:13px 17px;font-size:14px;cursor:pointer;
+    color:var(--muted);border-bottom:2.5px solid transparent;font-family:inherit;font-weight:600;
+    transition:color .18s var(--ease), border-color .18s var(--ease);border-radius:8px 8px 0 0;
+  }
+  .tabs button:hover{color:var(--brand);background:rgba(31,95,191,.05)}
+  .tabs button.on{color:var(--brand);border-bottom-color:var(--brand)}
+  .tabpane{display:none;animation:fade .28s var(--ease)}
+  .tabpane.on{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* ---------------------------------------------------------- 表单 */
+  label.f{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px;font-weight:600}
+  select,input[type=text]{
+    width:100%;padding:10px 12px;border:1px solid var(--line-strong);border-radius:var(--r-sm);
+    font-family:inherit;font-size:14px;background:#fff;color:var(--ink);
+    transition:border-color .18s var(--ease), box-shadow .18s var(--ease);
+  }
+  select:hover,input[type=text]:hover{border-color:#b9c6da}
+  select:focus,input[type=text]:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(31,95,191,.13)}
+  input[type=range]{
+    width:100%;height:5px;border-radius:99px;background:var(--line);appearance:none;outline:none;margin:6px 0;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    appearance:none;width:17px;height:17px;border-radius:50%;background:#fff;
+    border:2.5px solid var(--brand);cursor:pointer;box-shadow:0 1px 4px rgba(15,32,64,.24);
+    transition:transform .15s var(--ease);
+  }
+  input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.12)}
+  input[type=checkbox]{width:15px;height:15px;accent-color:var(--brand);vertical-align:-2px;margin-right:5px}
+  button.primary{
+    background:linear-gradient(180deg,var(--brand-2),var(--brand));color:#fff;border:none;
+    border-radius:var(--r-sm);padding:11px 22px;font-size:14px;font-weight:600;cursor:pointer;
+    font-family:inherit;box-shadow:0 2px 8px rgba(31,95,191,.28);
+    transition:transform .16s var(--ease), box-shadow .16s var(--ease), filter .16s var(--ease);
+  }
+  button.primary:hover{filter:brightness(1.06);box-shadow:0 4px 14px rgba(31,95,191,.34)}
+  button.primary:active{transform:translateY(1px)}
+  button.ghost{
+    background:#fff;color:var(--brand);border:1px solid var(--brand);border-radius:var(--r-sm);
+    padding:10px 19px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;
+    transition:background .16s var(--ease);
+  }
+  button.ghost:hover{background:var(--brand-tint)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+  /* ---------------------------------------------------------- 徽标 */
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 11px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.2px}
+  .b-high{background:#fdecec;color:var(--high)}
+  .b-mid{background:#fdf2e2;color:#a5701a}
+  .b-low{background:#eef1f6;color:#5b6675}
+  .b-pre{background:#eef1f6;color:#5b6675}
+  .b-live{background:#e6f7ef;color:var(--ok)}
+
+  /* ---------------------------------------------------------- 风险仪表 */
+  .riskhead{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+  .gauge{flex:0 0 210px}
+  .riskmeta{flex:1;min-width:210px}
+  .risknum{font-size:40px;font-weight:800;line-height:1.05;letter-spacing:-.5px}
+  .risklabel{color:var(--muted);font-size:12.5px;margin-top:6px}
+
+  /* ---------------------------------------------------------- 图表 */
+  .chart{width:100%;height:auto;display:block;overflow:visible}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:10px;align-items:center}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:0}
+
+  /* ---------------------------------------------------------- 表格 */
+  table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+  th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{
+    background:var(--surface-2);font-weight:700;color:var(--ink-2);white-space:nowrap;
+    position:sticky;top:0;font-size:12.5px;
+  }
+  tbody tr:hover td{background:#fafcff}
+  tr.best td{background:#f1fbf6!important;font-weight:600}
+  td.n{font-variant-numeric:tabular-nums}
+  .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:var(--r-md);max-height:460px}
+
+  /* ---------------------------------------------------------- 轨迹时间线 */
+  .trace{list-style:none;margin:0;padding:0 0 0 30px;position:relative}
+  .trace::before{content:"";position:absolute;left:13px;top:8px;bottom:8px;width:2px;background:linear-gradient(180deg,var(--brand),var(--line))}
+  .trace li{position:relative;margin-bottom:11px}
+  .trace li::before{
+    content:"";position:absolute;left:-24px;top:19px;width:11px;height:11px;border-radius:50%;
+    background:#fff;border:2.5px solid var(--brand);z-index:1;
+  }
+  .trace li.bad::before{border-color:var(--high)}
+  .trace .rowbox{
+    border:1px solid var(--line);border-radius:var(--r-md);background:#fff;overflow:hidden;
+    transition:box-shadow .2s var(--ease), border-color .2s var(--ease);
+  }
+  .trace .rowbox:hover{border-color:var(--line-strong);box-shadow:var(--sh-1)}
+  .trace .hd{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;cursor:pointer;user-select:none}
+  .trace .no{
+    width:24px;height:24px;flex:0 0 24px;border-radius:7px;background:var(--brand-tint);color:var(--brand);
+    display:grid;place-items:center;font-size:12px;font-weight:800;
+  }
+  .trace li.bad .no{background:#fdecec;color:var(--high)}
+  .trace .ttl{flex:1;min-width:0}
+  .trace .ttl b{font-size:13.5px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:-.2px}
+  .trace .ttl small{display:block;color:var(--muted);font-size:12.5px;margin-top:4px;line-height:1.6}
+  .trace .ms{color:var(--faint);font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .trace .bd{display:none;padding:0 16px 16px 52px;border-top:1px dashed var(--line)}
+  .trace li.open .bd{display:block;animation:fade .22s var(--ease)}
+  .trace .caret{color:var(--faint);transition:transform .2s var(--ease);font-size:11px;padding-top:4px}
+  .trace li.open .caret{transform:rotate(90deg)}
+  pre{
+    background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);
+    padding:11px 13px;overflow:auto;font-size:12px;margin:8px 0 0;max-height:280px;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;line-height:1.6;
+  }
+
+  /* ---------------------------------------------------------- 证据 */
+  .ev{
+    border-left:3px solid var(--brand);background:linear-gradient(90deg,#f7faff,#fff 60%);
+    padding:12px 16px;border-radius:0 var(--r-sm) var(--r-sm) 0;margin-bottom:11px;
+    border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+  }
+  .ev b{font-size:13px;color:var(--brand-dark)}
+  .ev p{margin:7px 0 0;font-size:12.5px;color:var(--ink-2);line-height:1.8}
+
+  /* ---------------------------------------------------------- 方案卡 */
+  .opts{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px}
+  @media(max-width:1040px){.opts{grid-template-columns:1fr}}
+  .opt{
+    position:relative;border:1.5px solid var(--line);border-radius:var(--r-lg);padding:18px;
+    background:#fff;transition:transform .2s var(--ease), box-shadow .2s var(--ease);
+  }
+  .opt:hover{transform:translateY(-2px);box-shadow:var(--sh-2)}
+  .opt .tag{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.4px}
+  .opt .nm{font-size:15px;font-weight:700;margin:6px 0 12px}
+  .opt .cost{font-size:25px;font-weight:800;letter-spacing:-.4px}
+  .opt .cost small{font-size:12px;color:var(--muted);font-weight:600;margin-left:3px}
+  .opt .detail{font-size:12px;color:var(--muted);line-height:1.9;margin-top:12px;border-top:1px dashed var(--line);padding-top:11px}
+  .opt .detail span{float:right;color:var(--ink-2);font-variant-numeric:tabular-nums}
+  .opt.best{border-color:var(--ok);box-shadow:0 6px 22px rgba(47,158,111,.16)}
+  .opt .ribbon{
+    position:absolute;top:-11px;right:16px;background:var(--ok);color:#fff;
+    font-size:11px;font-weight:700;padding:3px 11px;border-radius:999px;letter-spacing:.4px;
+  }
+
+  /* ---------------------------------------------------------- 其他 */
+  .note{font-size:12.5px;color:var(--muted);line-height:1.85}
+  .warnbox{
+    background:#fffbef;border:1px solid #f1e0b4;border-left:3px solid var(--mid);
+    border-radius:var(--r-sm);padding:13px 16px;font-size:12.5px;color:#7a5a11;line-height:1.8;
+  }
+  .okbox{
+    background:#f2fbf6;border:1px solid #c9e9d8;border-left:3px solid var(--ok);
+    border-radius:var(--r-sm);padding:13px 16px;font-size:13px;color:#1c6b4b;
+  }
+  .empty{text-align:center;color:var(--faint);padding:34px 12px;font-size:13px}
+  .empty .ico{font-size:30px;display:block;margin-bottom:10px;opacity:.45}
+  footer{color:var(--muted);font-size:12px;line-height:2;padding:22px 0 0;border-top:1px solid var(--line-strong);margin-top:12px}
+  footer b{color:var(--ink-2)}
+  .tt{
+    position:fixed;pointer-events:none;background:rgba(15,23,32,.94);color:#fff;font-size:12px;
+    padding:7px 11px;border-radius:8px;opacity:0;transition:opacity .12s var(--ease);z-index:99;
+    white-space:nowrap;box-shadow:0 6px 18px rgba(0,0,0,.22);
+  }
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:#cbd6e6;border-radius:99px;border:3px solid transparent;background-clip:content-box}
+  ::-webkit-scrollbar-thumb:hover{background:#aebdd2;background-clip:content-box}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brandrow">
+      <div class="mark">🏭</div>
+      <h1>智维Agent</h1>
+      <span class="live"><span class="dot"></span>数据已内嵌 · 离线可用</span>
+    </div>
+    <p class="sub">从“设备报警”到“诊断—决策—工单—复盘”的完整闭环。数据来源：UCI SECOM 半导体前道工序数据集
+      （1567 批次 × 591 路工艺信号，CC BY 4.0）。所有风险概率与归因均由模型真实计算得出。</p>
+    <div class="chips" id="chips"></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="kpi" id="kpi"></div>
+
+  <div class="tabs" id="tabs">
+    <button data-tab="monitor" class="on">① 监控与诊断</button>
+    <button data-tab="trace">② Agent 执行轨迹</button>
+    <button data-tab="decision">③ 决策与工单</button>
+    <button data-tab="kb">④ 维修知识库</button>
+    <button data-tab="eval">⑤ 模型评估</button>
+  </div>
+
+  <!-- ① 监控与诊断 -->
+  <section class="tabpane on" id="pane-monitor">
+    <div class="panel">
+      <h3>选择批次<span class="hint">按时间倒序，默认选中近期风险最高者</span></h3>
+      <div class="grid g2">
+        <div>
+          <label class="f">批次</label>
+          <select id="lotSel"></select>
+        </div>
+        <div>
+          <label class="f">筛选与操作</label>
+          <div class="row" style="margin-bottom:12px">
+            <label style="font-size:13px"><input type="checkbox" id="onlyHigh">只看超过阈值</label>
+            <label style="font-size:13px"><input type="checkbox" id="onlyFail">只看真实异常批次</label>
+          </div>
+          <div class="row">
+            <button class="primary" id="runBtn">▶ 运行诊断</button>
+            <button class="ghost" id="scanBtn">扫描最近批次</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid g2">
+      <div class="panel">
+        <h3>批次风险</h3>
+        <div class="riskhead">
+          <div class="gauge" id="gaugeBox"></div>
+          <div class="riskmeta" id="riskBox"></div>
+        </div>
+        <div class="note" id="lotMeta" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line)"></div>
+        <svg class="chart" id="sigChart" viewBox="0 0 660 350" preserveAspectRatio="xMidYMid meet" style="margin-top:10px"></svg>
+      </div>
+      <div class="panel">
+        <h3>全流程风险分布<span class="hint">1567 个批次</span></h3>
+        <canvas id="scatter" height="380" style="width:100%;height:380px"></canvas>
+        <div class="legend">
+          <span><i style="background:#cbd5e1"></i>低风险</span>
+          <span><i style="background:#e2922f"></i>中风险</span>
+          <span><i style="background:#dc4c4c"></i>高风险</span>
+          <span><i style="background:#0f2a52"></i>当前批次</span>
+          <span style="margin-left:auto;color:var(--faint)">鼠标悬停查看批次</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>智能体结论</h3>
+      <div id="conclusion" class="empty"><span class="ico">🔍</span>点击上方「运行诊断」开始</div>
+    </div>
+  </section>
+
+  <!-- ② 执行轨迹 -->
+  <section class="tabpane" id="pane-trace">
+    <div class="panel">
+      <h3>Agent 执行轨迹<span class="hint">点击任意步骤展开参数与返回值</span></h3>
+      <div class="note" style="margin-bottom:18px">
+        每一步都是真实的工具调用。<span class="badge b-pre">预计算</span> 表示该步骤结果由离线模型推理与知识库检索产生
+        （纯前端演示版无法在浏览器里训练模型或重建向量索引），
+        <span class="badge b-live">浏览器实时</span> 表示该步骤此刻真的在浏览器里执行。
+      </div>
+      <div id="traceBox"></div>
+      <div class="row" style="margin-top:16px">
+        <button class="ghost" id="dlTrace">下载轨迹 JSON</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ③ 决策与工单 -->
+  <section class="tabpane" id="pane-decision">
+    <div class="panel">
+      <h3>业务参数<span class="hint">拖动即可重新计算</span></h3>
+      <div class="grid g2" id="bizParams"></div>
+      <div class="warnbox" style="margin-top:16px">
+        以上参数为演示假设值，决策结果为期望代价模拟估算，不代表任何真实企业的经营数据。
+        调整参数后，下方方案排名与推荐结论会实时变化 —— 决策是算出来的，不是写死的。
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>维保方案模拟对比</h3>
+      <div class="opts" id="optionsBox"></div>
+      <div class="note" id="optionNote"></div>
+    </div>
+
+    <div class="panel">
+      <h3>智能体建议与人工确认</h3>
+      <div id="proposalBox" class="note"></div>
+      <div class="row" style="margin-top:16px">
+        <input type="text" id="operator" value="值班工程师" style="max-width:210px">
+        <button class="primary" id="approveBtn">✅ 确认生成工单</button>
+        <button class="ghost" id="rejectBtn">⛔ 拒绝，转人工</button>
+      </div>
+      <div id="approveMsg" style="margin-top:14px"></div>
+    </div>
+
+    <div class="panel">
+      <h3>工单台账<span class="hint">保存在本机浏览器，刷新不丢失</span></h3>
+      <div id="ordersBox"></div>
+      <div class="row" style="margin-top:16px">
+        <button class="ghost" id="clearOrders">清空工单库</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ④ 知识库 -->
+  <section class="tabpane" id="pane-kb">
+    <div class="panel">
+      <h3>维修知识库检索</h3>
+      <div class="note" id="kbInfo" style="margin-bottom:6px"></div>
+      <label class="f">检索问题</label>
+      <input type="text" id="kbQuery" value="过程参数漂移 怎么排查 停机">
+      <div id="kbResults" style="margin-top:16px"></div>
+    </div>
+    <div class="panel">
+      <h3>本轮智能体实际检索到的依据</h3>
+      <div id="kbUsed" class="empty"><span class="ico">📚</span>运行诊断后显示</div>
+    </div>
+  </section>
+
+  <!-- ⑤ 模型评估 -->
+  <section class="tabpane" id="pane-eval">
+    <div class="panel">
+      <h3>评估协议与指标</h3>
+      <div class="grid g2">
+        <div>
+          <h4 style="font-size:13px;margin-bottom:10px;color:var(--ink-2)">主协议：分层 5 折交叉验证（袋外预测）</h4>
+          <div class="tablewrap"><table id="cvTable"></table></div>
+        </div>
+        <div>
+          <h4 style="font-size:13px;margin-bottom:10px;color:var(--ink-2)">漂移检查：按时间切分留出集</h4>
+          <div class="tablewrap"><table id="hoTable"></table></div>
+          <div class="note" style="margin-top:10px">
+            时间留出集明显劣化，说明 SECOM 存在真实的时间漂移（工艺与设备状态随时间变化）。
+            这正是上线时必须做滚动重训与阈值在线校准的原因。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid g2">
+      <div class="panel">
+        <h3>PR 曲线<span class="hint">时间留出集</span></h3>
+        <svg class="chart" id="prChart" viewBox="0 0 500 330" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <div class="panel">
+        <h3>ROC 曲线<span class="hint">时间留出集</span></h3>
+        <svg class="chart" id="rocChart" viewBox="0 0 500 330" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>风险等级分层效果<span class="hint">历史批次，袋外评分</span></h3>
+      <div class="tablewrap"><table id="levelTable"></table></div>
+      <div class="note" id="levelNote" style="margin-top:10px"></div>
+    </div>
+  </section>
+
+  <footer>
+    <div><b>数据来源</b>：UCI Machine Learning Repository，SECOM（id=179），DOI 10.24432/C54305，许可 CC BY 4.0。
+      1567 个批次 × 591 路匿名工艺信号，异常批次 104 个（6.64%）。</div>
+    <div><b>模型</b>：XGBoost 集成（5 个自助采样模型取平均）+ SHAP 可解释性 + 字符 n-gram 维修知识库检索。</div>
+    <div><b>说明</b>：本单文件版用于展示与评审，全部推理结果已离线预计算并内嵌于本文件，因此完全离线可用。
+      风险概率为统计估计，决策结果为基于假设参数的模拟估算。完整智能体版本（可对新数据实时推理、含 LangGraph 编排与失败重试）见配套源码包。</div>
+  </footer>
+</div>
+
+<div class="tt" id="tip"></div>
+
+<script id="payload" type="application/json">/*__PAYLOAD__*/</script>
+<script>
+"use strict";
+const P = JSON.parse(document.getElementById("payload").textContent);
+const M = P.meta;
+const $ = s => document.querySelector(s);
+const pct = (v, d = 1) => (v * 100).toFixed(d) + "%";
+const money = v => "¥" + Math.round(v).toLocaleString("zh-CN");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const LEVEL_COLOR = { "高":"#dc4c4c", "中":"#e2922f", "低":"#94a3b8" };
+const LEVEL_CLASS = { "高":"b-high", "中":"b-mid", "低":"b-low" };
+
+let BIZ = { ...M.business };
+let CURRENT = null;
+let TRACE = null;
+// 某些浏览器（隐私模式 / 企业策略）会禁用本地存储，这里必须兜底，否则整个页面白屏
+const STORAGE_OK = (() => {
+  try { localStorage.setItem("__t", "1"); localStorage.removeItem("__t"); return true; } catch (e) { return false; }
+})();
+let ORDERS = [];
+try { ORDERS = JSON.parse(localStorage.getItem("zhixi_orders") || "[]"); } catch (e) { ORDERS = []; }
+
+/* ---------------------------------------------------------- 业务参数 */
+const BIZ_FIELDS = [
+  ["batchValue",         "单批次产值",          0, 100000, 500,  v => money(v)],
+  ["downtimeCostPerHour","停机损失（元/小时）",  0, 100000, 100,  v => money(v)],
+  ["repairHours",        "计划检修工时",         0.5, 24,  0.5,   v => v + " 小时"],
+  ["shiftHours",         "班次剩余时间",         0.5, 24,  0.5,   v => v + " 小时"],
+  ["reworkRecovery",     "返工可挽回比例",       0, 0.95, 0.05,  v => pct(v, 0)],
+];
+
+function renderBiz(){
+  $("#bizParams").innerHTML = BIZ_FIELDS.map(([k,label,min,max,step,fmt])=>`
+    <div>
+      <label class="f">${label}　<b class="num" id="bv_${k}" style="color:var(--brand)">${fmt(BIZ[k])}</b></label>
+      <input type="range" data-biz="${k}" min="${min}" max="${max}" step="${step}" value="${BIZ[k]}">
+    </div>`).join("");
+  $("#bizParams").querySelectorAll("input[data-biz]").forEach(el=>{
+    el.addEventListener("input", ()=>{
+      const k = el.dataset.biz;
+      BIZ[k] = parseFloat(el.value);
+      $("#bv_"+k).textContent = BIZ_FIELDS.find(x=>x[0]===k)[5](BIZ[k]);
+      renderDecision();
+    });
+  });
+}
+
+/* ------------------------------------------------------------ 决策模拟 */
+function simulate(p){
+  const b = BIZ, H = b.shiftHours;
+  const loss = b.batchValue * (1 - b.reworkRecovery);
+  const p0 = M.baseRate;
+  const h = Math.min(2, H);
+  const nTotal = H / b.hoursPerLot;
+
+  const qA = Math.min(1, b.repairHours / H);
+  const nA2 = Math.max(0, H - b.repairHours) / b.hoursPerLot;
+  const qualityA = nA2 * p0 * loss;
+  // 立即停机会是非计划停机，成本上浮
+  const dtA = b.downtimeCostPerHour * b.repairHours * (b.emergencyStopMultiplier || 1);
+  const costA = dtA + qA * b.urgency * b.delayPenalty + qualityA;
+
+  const nB1 = h / b.hoursPerLot;
+  const pRes = Math.max(p0, p * (1 - b.repairEffectiveness));
+  const nB2 = Math.max(0, H - h - b.repairHours) / b.hoursPerLot;
+  const qB = Math.min(1, (h + b.repairHours) / H);
+  const qualityB = nB1 * p * loss + nB2 * pRes * loss;
+  const dtB = b.downtimeCostPerHour * b.repairHours;   // 可计划安排，不上浮
+  const costB = dtB + qB * b.urgency * b.delayPenalty + qualityB;
+
+  const qualityC = nTotal * p * loss;
+  const costC = qualityC;
+
+  const opts = [
+    {id:"A", name:"立即停机检修", cost:costA, quality:qualityA,
+     downtime:dtA, delay:qA*b.urgency*b.delayPenalty,
+     hours:b.repairHours, note:"风险立即被拦截；属非计划停机，停机成本按 1.3 倍计"},
+    {id:"B", name:`继续生产 ${h} 小时后检修`, cost:costB, quality:qualityB,
+     downtime:dtB, delay:qB*b.urgency*b.delayPenalty,
+     hours:b.repairHours, note:`可计划安排，停机成本不上浮；检修后残存风险降至 ${pct(pRes)}`},
+    {id:"C", name:"不停机，生产到班次结束", cost:costC, quality:qualityC,
+     downtime:0, delay:0, hours:0, note:"不承担停机与交期风险，承担全部质量风险"},
+  ].sort((x,y)=>x.cost-y.cost);
+  return {opts, best:opts[0], worst:opts[opts.length-1], pRes};
+}
+
+/* ------------------------------------------------------------ 知识库 */
+let KB_INDEX = null;
+function bigrams(s){ const t = s.replace(/\s+/g,""); const out=[]; for(let i=0;i<t.length-1;i++) out.push(t.slice(i,i+2)); return out; }
+function buildKbIndex(){
+  const df = new Map();
+  const raw = P.docs.map(d=>{
+    const bg = bigrams(d.doc + " " + d.section + "\n" + d.text);
+    const tf = new Map();
+    bg.forEach(g=>tf.set(g,(tf.get(g)||0)+1));
+    tf.forEach((_,g)=>df.set(g,(df.get(g)||0)+1));
+    return {d, tf};
+  });
+  const N = raw.length;
+  const idf = g => Math.log((N+1)/((df.get(g)||0)+1)) + 1;
+  const docs = raw.map(({d,tf})=>{
+    const w = new Map();
+    let sum = 0;
+    tf.forEach((f,g)=>{ const val = (1+Math.log(f))*idf(g); w.set(g,val); sum += val*val; });
+    return {d, w, norm: Math.sqrt(sum) || 1};
+  });
+  KB_INDEX = {docs, idf};
+}
+function kbSearch(query, k=5){
+  const qset = new Map();
+  bigrams(query).forEach(g=>qset.set(g,(qset.get(g)||0)+1));
+  const qw = new Map();
+  let qsum = 0;
+  qset.forEach((qf,g)=>{ const val = (1+Math.log(qf))*KB_INDEX.idf(g); qw.set(g,val); qsum += val*val; });
+  const qnorm = Math.sqrt(qsum) || 1;
+  return KB_INDEX.docs.map(({d,w,norm})=>{
+    let s = 0;
+    qw.forEach((v,g)=>{ const dv = w.get(g); if(dv) s += v*dv; });
+    return {d, score: s/(qnorm*norm)};
+  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,k);
+}
+
+// 与 Python 版一致：把一个诊断问题拆成「怎么查 / 怎么修 / 要不要停」三个关注面，
+// 避免所有批次都只命中同一份手册。
+function aspectQueries(stations, highRisk){
+  const st = stations.filter(Boolean).join(" ") || "工序站";
+  return [
+    `${st} 过程参数 漂移 排查 判定 阈值`,
+    `${st} 点检 校验 处置 步骤 复测 放行`,
+    highRisk ? "停机 决策 原则 安全 复机 检查 清单"
+             : "异常批次 判定 在制 返工 报废 追溯",
+  ];
+}
+function kbSearchAspects(queries, k = 3){
+  const picked = new Map(), ordered = [];
+  for (const q of queries){
+    for (const h of kbSearch(q, 3)){
+      const key = h.d.doc + "·" + h.d.section;
+      if (picked.has(key)) continue;
+      picked.set(key, h); ordered.push(h); break;
+    }
+  }
+  if (ordered.length < k){
+    for (const q of queries){
+      for (const h of kbSearch(q, 6)){
+        const key = h.d.doc + "·" + h.d.section;
+        if (picked.has(key)) continue;
+        picked.set(key, h); ordered.push(h);
+        if (ordered.length >= k) break;
+      }
+      if (ordered.length >= k) break;
+    }
+  }
+  return ordered.slice(0, k).sort((a,b) => b.score - a.score);
+}
+
+/* -------------------------------------------------------------- 工具 */
+const lotById = id => P.lots.find(l=>l.id===id);
+const featName = i => P.features[i];
+const groupName = i => P.groups[i];
+const topPositives = (lot, n=3) => lot.shap.filter(([,s])=>s>0).slice(0,n);
+
+// 有些批次的 top10 归因里一个正向贡献都没有（贡献全为负），
+// 这时不能显示空白的「主要异常信号」，而要改说「未发现拉升风险的信号」。
+function signalSummary(lot, n = 3){
+  const pos = lot.shap.filter(([,s]) => s > 0);
+  if (pos.length) return { label: "主要异常信号", items: pos.slice(0,n), positive: true };
+  const top = lot.shap.slice().sort((a,b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, n);
+  return { label: "影响最大的信号", items: top, positive: false };
+}
+const fmtSignal = ([fi, s]) => `${featName(fi)}<span style="color:var(--muted)">(${groupName(fi)})</span> ${s>=0?"+":""}${s.toFixed(2)}`;
+
+function recommendation(lot){
+  const sim = simulate(lot.risk);
+  const st = P.groupNames[lot.suspected];
+  const id = sim.best.id;
+  let action;
+  if(id==="A") action = `立即停机检修：对${st}执行零点校验、泄漏检查与部件点检`;
+  else if(id==="B") action = `延时检修：${sim.best.name}，其间加严抽检并准备备件`;
+  else action = `维持生产并加严抽检，若${st}风险继续上升则立即停机检修`;
+  const p = lot.risk;
+  const priority = p >= Math.max(0.6, M.highThreshold) ? "高" : (p >= M.threshold ? "中" : "低");
+  return {sim, station:st, action, priority, id};
+}
+function evidenceList(lot){
+  return lot.ev.map(([di,score])=>{
+    const d = P.docs[di] || {doc:"—",section:"—",text:""};
+    return {doc:d.doc, section:d.section, text:d.text, score, citation:`${d.doc} · ${d.section}`};
+  });
+}
+function evidenceSummary(lot){
+  return evidenceList(lot).slice(0,2)
+    .map(e=>`${e.citation}：${e.text.replace(/[#*`>|-]+/g," ").replace(/\s+/g," ").trim().slice(0,90)}…`)
+    .join("　｜　");
+}
+function spareParts(lot){
+  const text = evidenceList(lot).map(e=>e.text).join(" ");
+  const map = {
+    "密封件":["密封","泄漏","O 型圈","门封"],
+    "质量流量控制器(MFC)":["MFC","流量"],
+    "射频匹配网络部件":["射频","匹配","反射功率"],
+    "静电吸盘(ESC)":["静电吸盘","ESC"],
+    "温度传感器/热电偶":["温度传感器","热电偶","零点校验"],
+  };
+  return Object.entries(map).filter(([,kws])=>kws.some(k=>text.includes(k))).map(([k])=>k);
+}
+
+/* ---------------------------------------------------------------- 渲染 */
+function renderChips(){
+  const items = [
+    `模型：${M.model}`,
+    `样本：${M.nSamples} 批次 × ${M.nFeatures} 路信号`,
+    `异常批次：${M.nPositives}（${pct(M.baseRate)}）`,
+    `PR-AUC：${(M.cv.pr_auc||0).toFixed(3)}`,
+    `Recall：${(M.cv.recall||0).toFixed(3)}`,
+    `F1：${(M.cv.f1||0).toFixed(3)}`,
+    `触发阈值：${pct(M.threshold)}`,
+  ];
+  $("#chips").innerHTML = items.map(t=>`<span class="chip">${esc(t)}</span>`).join("");
+}
+
+function renderKpi(){
+  const lot = CURRENT;
+  const cards = [
+    ["当前批次", lot ? lot.id : "—", "", "var(--brand)"],
+    ["异常概率", lot ? pct(lot.risk) : "—", "", lot ? LEVEL_COLOR[lot.level] : "var(--brand)"],
+    ["风险等级", lot ? lot.level : "—", "", lot ? LEVEL_COLOR[lot.level] : "var(--brand)"],
+    ["触发阈值", pct(M.threshold), "", "var(--mid)"],
+    ["工单总数", String(ORDERS.length), "条", "var(--ok)"],
+  ];
+  $("#kpi").innerHTML = cards.map(([k,v,suf,c])=>
+    `<div class="kcard" style="--kc:${c}">
+       <div class="k">${k}</div>
+       <div class="v num">${esc(v)}${suf?`<small>${suf}</small>`:""}</div>
+     </div>`).join("");
+}
+
+function renderLotOptions(){
+  const onlyHigh = $("#onlyHigh").checked, onlyFail = $("#onlyFail").checked;
+  const list = P.lots.slice().reverse().filter(l=>
+    (!onlyHigh || l.risk >= M.threshold) && (!onlyFail || l.y === 1));
+  const keep = CURRENT ? CURRENT.id : null;
+  $("#lotSel").innerHTML = list.map(l=>
+    `<option value="${l.id}">${l.id} ｜ ${l.ts.slice(5,16)} ｜ 风险 ${pct(l.risk)} ｜ ${l.level}</option>`
+  ).join("");
+  if(keep && list.some(l=>l.id===keep)) $("#lotSel").value = keep;
+  else if(list.length) $("#lotSel").value = list.slice().sort((a,b)=>b.risk-a.risk)[0].id;
+}
+
+function arcPath(cx, cy, r, a0, a1){
+  const rad = a => (a - 180) * Math.PI / 180;
+  const x0 = cx + r*Math.cos(rad(a0)), y0 = cy + r*Math.sin(rad(a0));
+  const x1 = cx + r*Math.cos(rad(a1)), y1 = cy + r*Math.sin(rad(a1));
+  const large = (a1 - a0) > 180 ? 1 : 0;
+  return `M ${x0.toFixed(2)},${y0.toFixed(2)} A ${r},${r} 0 ${large} 1 ${x1.toFixed(2)},${y1.toFixed(2)}`;
+}
+
+function drawGauge(lot){
+  const cx=105, cy=100, r=78;
+  const v = Math.min(Math.max(lot.risk,0),1);
+  const ang = v*180;
+  const col = lot.risk >= M.threshold ? LEVEL_COLOR[lot.level] : "var(--ok)";
+  const th = M.threshold*180;
+  const tx = cx + (r+13)*Math.cos((th-180)*Math.PI/180);
+  const ty = cy + (r+13)*Math.sin((th-180)*Math.PI/180);
+  $("#gaugeBox").innerHTML = `
+    <svg viewBox="0 0 210 132" style="width:100%;height:auto;display:block">
+      <path d="${arcPath(cx,cy,r,0,180)}" fill="none" stroke="#e6ebf3" stroke-width="15" stroke-linecap="round"/>
+      <path d="${arcPath(cx,cy,r,0,Math.max(ang,0.6))}" fill="none" stroke="${col}" stroke-width="15" stroke-linecap="round"/>
+      <line x1="${cx}" y1="${cy}" x2="${tx.toFixed(1)}" y2="${ty.toFixed(1)}" stroke="#334155" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="${cx}" cy="${cy}" r="5" fill="#334155"/>
+      <text x="${cx-r}" y="${cy+22}" font-size="10" fill="#94a3b8" text-anchor="middle">0%</text>
+      <text x="${cx+r}" y="${cy+22}" font-size="10" fill="#94a3b8" text-anchor="middle">100%</text>
+    </svg>`;
+}
+
+function renderLot(){
+  const lot = CURRENT; if(!lot) return;
+  const rec = recommendation(lot);
+  drawGauge(lot);
+  $("#riskBox").innerHTML = `
+    <div class="risknum num" style="color:${LEVEL_COLOR[lot.level]}">${pct(lot.risk)}</div>
+    <div style="margin-top:8px">
+      <span class="badge ${LEVEL_CLASS[lot.level]}">风险等级 ${lot.level}</span>
+      <span class="badge b-low" style="margin-left:6px">触发阈值 ${pct(M.threshold)}</span>
+    </div>
+    <div class="risklabel">袋外评分 ${pct(lot.risk)}　·　集成实时评分 ${pct(lot.riskEns)}</div>`;
+
+  $("#lotMeta").innerHTML = `
+    <div>批次编号 <b>${lot.id}</b>　·　时间 ${lot.ts}</div>
+    <div>疑似工序站 <b style="color:var(--brand)">${esc(rec.station)}</b>　·　真实标签
+      <b style="color:${lot.y===1?'var(--high)':'var(--ok)'}">${lot.y===1?'异常':'正常'}</b>
+      <span style="color:var(--faint)">（真实标签仅用于演示核对，智能体看不到）</span></div>`;
+
+  drawSignalChart(lot);
+  drawScatter();
+  renderDecision();
+  renderKbUsed(lot);
+}
+
+function drawSignalChart(lot){
+  const W=660, H=350, L=64, R=42, T=18, Bm=30;
+  const rows = lot.sig.slice(0,12).map(([fi,z,val])=>({name:featName(fi), z, val}));
+  const maxAbs = Math.max(3, ...rows.map(r=>Math.abs(r.z)));
+  const X = v => L + (v + maxAbs)/(2*maxAbs) * (W-L-R);
+  const rowH = (H-T-Bm)/rows.length;
+  let s = "";
+  // 3σ 警戒区
+  s += `<rect x="${X(3).toFixed(1)}" y="${T}" width="${(X(maxAbs)-X(3)).toFixed(1)}" height="${H-T-Bm}" fill="#fdf2f2"/>`;
+  s += `<rect x="${X(-maxAbs).toFixed(1)}" y="${T}" width="${(X(-3)-X(-maxAbs)).toFixed(1)}" height="${H-T-Bm}" fill="#fdf2f2"/>`;
+  // 网格
+  for(let g=-Math.ceil(maxAbs/3)*3; g<=maxAbs; g+=3){
+    if(Math.abs(g)>maxAbs) continue;
+    s += `<line x1="${X(g).toFixed(1)}" y1="${T}" x2="${X(g).toFixed(1)}" y2="${H-Bm}" stroke="#eaeff7" stroke-width="1"/>`;
+    s += `<text x="${X(g).toFixed(1)}" y="${H-Bm+17}" font-size="10" fill="#94a3b8" text-anchor="middle">${g>0?'+':''}${g}σ</text>`;
+  }
+  s += `<line x1="${X(0).toFixed(1)}" y1="${T}" x2="${X(0).toFixed(1)}" y2="${H-Bm}" stroke="#cbd5e1" stroke-width="1.4"/>`;
+  rows.forEach((r,i)=>{
+    const y = T + i*rowH + rowH*0.5, h = Math.min(rowH*0.52, 15);
+    const x0 = X(0), x1 = X(r.z);
+    const col = Math.abs(r.z) >= 3 ? "#dc4c4c" : "#3b82c4";
+    s += `<rect x="${Math.min(x0,x1).toFixed(1)}" y="${(y-h/2).toFixed(1)}" width="${Math.abs(x1-x0).toFixed(1)}"
+            height="${h.toFixed(1)}" rx="3" fill="${col}" opacity="${Math.abs(r.z)>=3?0.95:0.82}"/>`;
+    s += `<text x="${L-10}" y="${y+4}" text-anchor="end" font-size="10.5" fill="#475569"
+            font-family="ui-monospace,Consolas,monospace">${r.name}</text>`;
+    s += `<text x="${(x1 + (r.z>=0?7:-7)).toFixed(1)}" y="${y+4}" text-anchor="${r.z>=0?'start':'end'}"
+            font-size="10.5" fill="${Math.abs(r.z)>=3?'#dc4c4c':'#94a3b8'}"
+            font-variant-numeric="tabular-nums">${r.z.toFixed(1)}</text>`;
+  });
+  s += `<text x="${L}" y="10" font-size="10" fill="#94a3b8">偏差最大的 12 路工艺信号（标准分 σ）</text>`;
+  $("#sigChart").innerHTML = s;
+}
+
+let SCATTER_PTS = [];
+function drawScatter(){
+  const cv = $("#scatter"), dpr = window.devicePixelRatio || 1;
+  const W = cv.clientWidth || 620, H = 380;
+  cv.width = W*dpr; cv.height = H*dpr;
+  const ctx = cv.getContext("2d"); ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,H);
+  const L=54, R=16, T=16, Bm=40;
+  const xs = P.lots.map(l=>new Date(l.ts.replace(" ","T")).getTime());
+  const xmin = Math.min(...xs), xmax = Math.max(...xs);
+  const X = t => L + (t-xmin)/(xmax-xmin)*(W-L-R);
+  const Y = v => T + (1-v)*(H-T-Bm);
+  // 阈值以下淡色带
+  ctx.fillStyle="#f6faf8"; ctx.fillRect(L, Y(M.threshold), W-L-R, Y(0)-Y(M.threshold));
+  ctx.strokeStyle="#eaeff7"; ctx.fillStyle="#94a3b8"; ctx.font="10px ui-monospace,Consolas,monospace";
+  [0,0.25,0.5,0.75,1].forEach(v=>{
+    ctx.beginPath(); ctx.moveTo(L,Y(v)); ctx.lineTo(W-R,Y(v)); ctx.stroke();
+    ctx.fillText((v*100)+"%", 10, Y(v)+3);
+  });
+  ctx.strokeStyle="#dc4c4c"; ctx.setLineDash([5,4]); ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.moveTo(L,Y(M.threshold)); ctx.lineTo(W-R,Y(M.threshold)); ctx.stroke();
+  ctx.setLineDash([]); ctx.fillStyle="#dc4c4c"; ctx.font="10px sans-serif";
+  ctx.fillText("触发阈值 "+pct(M.threshold), L+6, Y(M.threshold)-6);
+  const colors = {"高":"#dc4c4c","中":"#e2922f","低":"#cbd5e1"};
+  SCATTER_PTS = [];
+  P.lots.forEach((l,i)=>{
+    const px = X(xs[i]), py = Y(l.risk);
+    ctx.fillStyle = colors[l.level];
+    ctx.globalAlpha = l.level==="低"?0.62:0.95;
+    ctx.beginPath(); ctx.arc(px,py,CURRENT&&l.id===CURRENT.id?5:2.3,0,Math.PI*2); ctx.fill();
+    SCATTER_PTS.push({x:px,y:py,lot:l});
+  });
+  ctx.globalAlpha=1;
+  if(CURRENT){
+    const i = P.lots.findIndex(l=>l.id===CURRENT.id);
+    ctx.strokeStyle="#0f2a52"; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(X(xs[i]),Y(CURRENT.risk),8.5,0,Math.PI*2); ctx.stroke();
+  }
+  ctx.fillStyle="#94a3b8"; ctx.font="10px sans-serif";
+  ctx.fillText("时间 →", W-R-42, H-14);
+}
+
+$("#scatter").addEventListener("mousemove", e=>{
+  const r = e.target.getBoundingClientRect();
+  const mx = e.clientX-r.left, my = e.clientY-r.top;
+  let best=null, bd=1e9;
+  SCATTER_PTS.forEach(p=>{ const d=(p.x-mx)**2+(p.y-my)**2; if(d<bd){bd=d;best=p;} });
+  const tip = $("#tip");
+  if(best && bd < 130){
+    tip.textContent = `${best.lot.id}　风险 ${pct(best.lot.risk)}　${best.lot.level}`;
+    tip.style.left = (e.clientX+14)+"px"; tip.style.top = (e.clientY-12)+"px"; tip.style.opacity=1;
+  } else tip.style.opacity=0;
+});
+$("#scatter").addEventListener("mouseleave", ()=>{ $("#tip").style.opacity=0; });
+
+function renderDecision(){
+  const lot = CURRENT; if(!lot) return;
+  const rec = recommendation(lot);
+  const {opts, best, worst} = rec.sim;
+  $("#optionsBox").innerHTML = opts.map(o=>`
+    <div class="opt ${o.id===best.id?'best':''}">
+      ${o.id===best.id?'<span class="ribbon">推荐</span>':''}
+      <div class="tag">方案 ${o.id}</div>
+      <div class="nm">${esc(o.name)}</div>
+      <div class="cost num">${money(o.cost)}<small>期望代价</small></div>
+      <div class="detail">
+        质量损失<span>${money(o.quality)}</span><br>
+        停机损失<span>${money(o.downtime)}</span><br>
+        交期风险<span>${money(o.delay)}</span><br>
+        停机时长<span>${o.hours} h</span>
+      </div>
+      <div class="note" style="margin-top:10px">${esc(o.note)}</div>
+    </div>`).join("");
+  $("#optionNote").innerHTML = `
+    优选方案 <b style="color:var(--ok)">${esc(best.name)}</b>，比最差方案节省
+    <b>${money(worst.cost-best.cost)}</b>。模拟参数：单批次产值 ${money(BIZ.batchValue)}、
+    停机损失 ${money(BIZ.downtimeCostPerHour)}/小时、检修工时 ${BIZ.repairHours} 小时、
+    班次剩余 ${BIZ.shiftHours} 小时、返工可挽回 ${pct(BIZ.reworkRecovery,0)}、
+    基准不良率 ${pct(M.baseRate)}、检修有效性 70%、延期罚金 ${money(BIZ.delayPenalty)}、
+    非计划停机成本上浮 ${pct((BIZ.emergencyStopMultiplier||1)-1, 0)}。`;
+
+  $("#proposalBox").innerHTML = `
+    <div>动作：<b style="color:var(--brand-dark)">${esc(rec.action)}</b></div>
+    <div>工序站 <b>${esc(rec.station)}</b>　·　优先级 <b>${rec.priority}</b>　·　负责人 ${esc(rec.station)}维护组　·　预计工时 ${BIZ.repairHours} 小时</div>
+    <div>备件：${spareParts(lot).join("、") || "—"}</div>
+    <div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)">决策依据：${esc(evidenceSummary(lot))}</div>`;
+}
+
+function renderKbUsed(lot){
+  const evs = evidenceList(lot);
+  $("#kbUsed").innerHTML = evs.length
+    ? evs.map(e=>`<div class="ev"><b>${esc(e.citation)}</b>
+        <span class="badge b-low" style="margin-left:8px">相似度 ${e.score}</span>
+        <p>${esc(e.text.slice(0,300))}…</p></div>`).join("")
+    : `<div class="empty"><span class="ico">📚</span>本次未检索到依据</div>`;
+}
+
+/* ---------------------------------------------------------------- 轨迹 */
+function buildTrace(lot){
+  const rec = recommendation(lot);
+  const {sim} = rec;
+  const evs = evidenceList(lot);
+  const t0 = performance.now();
+  const steps = [];
+  let clock = 0;
+  const add = (node, tool, doc, args, out, summary, source) => {
+    clock += 1 + Math.random()*6;
+    steps.push({no:steps.length+1, node, tool, doc, args, out, summary, source, ms:Math.round(clock*2)});
+  };
+
+  add("parse_intent", "intent_parser", "解析用户意图，定位要诊断的批次",
+      {question:`批次 ${lot.id} 为什么风险高？要不要停机检修？`},
+      {intent:"diagnose", lot_id:lot.id, planner:"离线规则"},
+      `识别为「单批次诊断」，目标批次 ${lot.id}`, "live");
+
+  const topSig = lot.sig[0];
+  const shifted = lot.sig.filter(s=>Math.abs(s[1])>=3).length;
+  add("fetch_sensor", "get_sensor_data",
+      "查询指定批次最近一次工序信号快照，并计算相对训练分布的标准分偏差",
+      {lot_id:lot.id, top_k:12},
+      {n_signals:M.nFeatures, shifted_signals:shifted,
+       top_signal:{feature:featName(topSig[0]), z:topSig[1], value:topSig[2]}},
+      `读取 ${lot.id} 的 ${M.nFeatures} 路有效工艺信号，超过 3σ 的信号 ${shifted} 路`, "pre");
+
+  add("predict_failure", "predict_failure",
+      "调用工业风险预测模型，输出该批次出现质量异常的概率",
+      {lot_id:lot.id},
+      {risk:lot.risk, threshold:M.threshold, high_threshold:M.highThreshold,
+       level:lot.level, is_high:lot.risk>=M.threshold},
+      `模型判定异常概率 ${pct(lot.risk)}（触发阈值 ${pct(M.threshold)}）→ 风险等级 ${lot.level}`, "pre");
+
+  const ss = signalSummary(lot, 3);
+  add("explain_failure", "explain_failure",
+      "调用可解释性模块（SHAP），说明是哪些信号把风险推高",
+      {lot_id:lot.id},
+      {backend:"shap-tree", suspected_station:rec.station,
+       contributions:ss.items.map(([fi,s])=>({feature:featName(fi), group:groupName(fi), shap_value:s}))},
+      ss.positive
+        ? `主要拉升风险的信号：${ss.items.map(([fi,s])=>`${featName(fi)}(${groupName(fi)}) ${s>=0?"+":""}${s.toFixed(2)}`).join("；")}`
+        : `未发现拉升风险的信号（贡献均为负向），影响最大的信号：${ss.items.map(([fi,s])=>`${featName(fi)} ${s.toFixed(2)}`).join("；")}`,
+      "pre");
+
+  const queryStations = [rec.station, ...lot.stations.slice(1,2).map(([gi])=>P.groupNames[gi])];
+  const aspects = aspectQueries(queryStations, lot.risk >= M.threshold);
+  add("retrieve_manual", "search_maintenance_manual",
+      "检索维修知识库（设备维护手册 / 点检 SOP / 安全规范）",
+      {query:aspects, k:3, mode:"多关注面检索"},
+      {backend:"TF-IDF 字符 n-gram，按关注面拆分后合并",
+       evidence:evs.map(e=>({citation:e.citation, score:e.score}))},
+      `命中维修依据：${evs.map(e=>e.citation).join("、")}`, "pre");
+
+  add("simulate_decision", "simulate_maintenance_decision",
+      "模拟“立即检修 / 延时检修 / 继续生产”三种方案的期望代价",
+      {lot_id:lot.id, risk:lot.risk, horizon_hours:BIZ.shiftHours},
+      {recommended:sim.best.id,
+       options:sim.opts.map(o=>({id:o.id,name:o.name,expected_cost:Math.round(o.cost*10)/10}))},
+      `三方案模拟：优选 ${sim.best.name}，期望代价 ${money(sim.best.cost)}，较最差方案节省 ${money(sim.worst.cost-sim.best.cost)}`,
+      "live");
+
+  add("propose", "planner",
+      "综合风险、归因、依据与模拟结果，形成维修建议",
+      {lot_id:lot.id},
+      {station:rec.station, priority:rec.priority, action:rec.action,
+       owner:`${rec.station}维护组`, spare_parts:spareParts(lot).join("、")},
+      `形成建议：${rec.action}（优先级 ${rec.priority}）`, "live");
+
+  add("human_review", "interrupt",
+      "LangGraph 人工确认节点：暂停执行，等待值班工程师确认后才可派工",
+      {type:"approval_request", lot_id:lot.id},
+      {status:"waiting_for_approval"},
+      "已暂停，等待人工确认生成维修工单", "live");
+
+  return {steps, totalMs:Math.round(performance.now()-t0)};
+}
+
+function renderTrace(){
+  if(!TRACE){
+    $("#traceBox").innerHTML = `<div class="empty"><span class="ico">🧭</span>点击「① 监控与诊断」里的「运行诊断」生成轨迹</div>`;
+    return;
+  }
+  $("#traceBox").innerHTML = `<ul class="trace">` + TRACE.steps.map((s,i)=>`
+    <li data-i="${i}" class="${s.source==='pre'?'':'live'}">
+      <div class="rowbox">
+        <div class="hd">
+          <div class="no">${s.no}</div>
+          <div class="ttl">
+            <b>[${esc(s.node)}] ${esc(s.tool)}</b>
+            <span class="badge ${s.source==='pre'?'b-pre':'b-live'}" style="margin-left:9px">
+              ${s.source==='pre'?'预计算':'浏览器实时'}</span>
+            <small>${esc(s.summary)}</small>
+          </div>
+          <div class="ms num">${s.ms} ms</div>
+          <div class="caret">▶</div>
+        </div>
+        <div class="bd">
+          <div class="note">${esc(s.doc)}</div>
+          <div style="font-weight:700;margin-top:12px;font-size:12.5px">调用参数</div>
+          <pre>${esc(JSON.stringify(s.args,null,2))}</pre>
+          <div style="font-weight:700;margin-top:10px;font-size:12.5px">返回结果</div>
+          <pre>${esc(JSON.stringify(s.out,null,2))}</pre>
+        </div>
+      </div>
+    </li>`).join("") + `</ul>`;
+  $("#traceBox").querySelectorAll(".trace .hd").forEach(hd=>{
+    hd.addEventListener("click", ()=>hd.parentElement.parentElement.classList.toggle("open"));
+  });
+}
+
+/* ---------------------------------------------------------------- 工单 */
+function saveOrders(){
+  if (!STORAGE_OK) return;
+  try { localStorage.setItem("zhixi_orders", JSON.stringify(ORDERS)); } catch (e) { /* 存储不可用时仅保存在内存 */ }
+}
+function renderOrders(){
+  $("#ordersBox").innerHTML = !ORDERS.length
+    ? `<div class="empty"><span class="ico">📋</span>暂无工单。运行诊断并在「人工确认」中点击确认即可生成</div>`
+    : `<div class="tablewrap"><table>
+        <tr><th>工单号</th><th>批次</th><th>工序站</th><th>优先级</th><th>异常概率</th>
+            <th>建议动作</th><th>负责人</th><th>备件</th><th>状态</th><th>操作</th></tr>
+        ${ORDERS.map((o,i)=>`<tr>
+          <td><b>${esc(o.code)}</b></td><td>${esc(o.lot)}</td><td>${esc(o.station)}</td>
+          <td><span class="badge ${LEVEL_CLASS[o.priority]||'b-low'}">${esc(o.priority)}</span></td>
+          <td class="n">${pct(o.risk)}</td><td>${esc(o.action)}</td>
+          <td>${esc(o.owner)}</td><td>${esc(o.parts||"—")}</td>
+          <td>${esc(o.status)}</td>
+          <td>${o.status==="待执行"?`<button class="ghost" data-close="${i}" style="padding:5px 11px;font-size:12px">标记完成</button>`:"—"}</td>
+        </tr>`).join("")}</table></div>`;
+  $("#ordersBox").querySelectorAll("[data-close]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      ORDERS[+b.dataset.close].status = "已完成";
+      saveOrders(); renderOrders(); renderKpi();
+    });
+  });
+}
+function nextCode(){
+  const d = new Date();
+  const ymd = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}`;
+  const n = ORDERS.filter(o=>o.code.startsWith("WO-"+ymd)).length + 1;
+  return `WO-${ymd}-${String(n).padStart(3,"0")}`;
+}
+
+/* ------------------------------------------------------------- 事件 */
+$("#tabs").addEventListener("click", e=>{
+  const b = e.target.closest("button[data-tab]"); if(!b) return;
+  $("#tabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b));
+  document.querySelectorAll(".tabpane").forEach(p=>p.classList.toggle("on", p.id==="pane-"+b.dataset.tab));
+  if(b.dataset.tab==="monitor") drawScatter();
+  window.scrollTo({top:0,behavior:"smooth"});
+});
+
+$("#lotSel").addEventListener("change", e=>{
+  CURRENT = lotById(e.target.value);
+  renderKpi(); renderLot();
+});
+$("#onlyHigh").addEventListener("change", renderLotOptions);
+$("#onlyFail").addEventListener("change", renderLotOptions);
+
+$("#runBtn").addEventListener("click", ()=>{
+  const lot = CURRENT || P.lots[0];
+  TRACE = buildTrace(lot);
+  renderTrace();
+  const rec = recommendation(lot);
+  const sim = rec.sim;
+  const ss = signalSummary(lot, 3);
+  $("#conclusion").className = "";
+  $("#conclusion").innerHTML = `
+    <div style="font-size:14px;color:var(--ink);line-height:2.1">
+      <b style="font-size:15px">【批次 ${lot.id} 维保诊断结论】</b><br>
+      风险概率：<b style="color:${LEVEL_COLOR[lot.level]};font-size:16px">${pct(lot.risk)}</b>
+      <span class="badge ${LEVEL_CLASS[lot.level]}" style="margin-left:6px">${lot.level}</span>
+      <span style="color:var(--muted)">（触发阈值 ${pct(M.threshold)}）</span><br>
+      ${ss.positive
+        ? `主要异常信号：${ss.items.map(fmtSignal).join("、")}`
+        : `未发现拉升风险的信号（各信号贡献均为负向或接近零），风险主要由基线水平决定`}<br>
+      定位工序站：<b style="color:var(--brand)">${esc(rec.station)}</b><br>
+      模拟决策：优选「<b>${esc(sim.best.name)}</b>」，期望代价 <b class="num">${money(sim.best.cost)}</b>
+      （较最差方案节省 <span class="num">${money(sim.worst.cost-sim.best.cost)}</span>）<br>
+      建议动作：<b>${esc(rec.action)}</b><br>
+      优先级 ${rec.priority}　·　负责人 ${esc(rec.station)}维护组　·　预计工时 ${BIZ.repairHours} 小时　·　
+      备件 ${spareParts(lot).join("、")||"—"}<br>
+      决策依据：${esc(evidenceSummary(lot))}
+    </div>
+    <div class="note" style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)">
+      本次执行 ${TRACE.steps.length} 步，耗时约 ${TRACE.totalMs} ms。风险概率为统计估计，决策结果为基于假设参数的模拟估算。
+    </div>`;
+  document.querySelector('#tabs button[data-tab="trace"]').click();
+});
+
+$("#scanBtn").addEventListener("click", ()=>{
+  const recent = P.lots.slice(-300);
+  const high = recent.filter(l=>l.risk>=M.threshold).sort((a,b)=>b.risk-a.risk);
+  $("#conclusion").className = "";
+  $("#conclusion").innerHTML = `
+    <div style="font-size:14px;line-height:2.1">
+      <b style="font-size:15px">【批次巡检结论】最近 ${recent.length} 个批次</b><br>
+      其中高风险批次 <b style="color:var(--high);font-size:16px">${high.length}</b> 个。<br>
+      ${high.slice(0,8).map(l=>`· ${l.id}（${l.ts}）风险 <b>${pct(l.risk)}</b>`).join("<br>")}<br>
+      ${high.length?`建议优先排查：<b style="color:var(--brand)">${high[0].id}</b>`
+                   :"当前窗口内没有超过触发阈值的批次，维持正常生产并继续监测。"}
+    </div>`;
+  if(high.length){
+    CURRENT = high[0];
+    renderLotOptions(); $("#lotSel").value = CURRENT.id;
+    renderKpi(); renderLot();
+  }
+  document.querySelector('#tabs button[data-tab="monitor"]').click();
+});
+
+$("#approveBtn").addEventListener("click", ()=>{
+  if(!CURRENT) return;
+  const rec = recommendation(CURRENT);
+  const op = $("#operator").value || "值班工程师";
+  const code = nextCode();
+  ORDERS.unshift({
+    code, lot:CURRENT.id, station:rec.station, priority:rec.priority, risk:CURRENT.risk,
+    action:rec.action, owner:`${rec.station}维护组`, parts:spareParts(CURRENT).join("、"),
+    evidence:evidenceSummary(CURRENT), operator:op, status:"待执行",
+    createdAt:new Date().toLocaleString("zh-CN"),
+  });
+  saveOrders(); renderOrders(); renderKpi();
+  $("#approveMsg").innerHTML = `<div class="okbox">✅ 工单 <b>${code}</b> 已生成并写入台账（确认人：${esc(op)}）</div>`;
+});
+
+$("#rejectBtn").addEventListener("click", ()=>{
+  $("#approveMsg").innerHTML = `<div class="warnbox">⛔ 工程师选择不自动派工，已记录并转人工处理，未生成工单。</div>`;
+});
+
+$("#clearOrders").addEventListener("click", ()=>{
+  if(confirm("确定清空全部工单记录？")){ ORDERS = []; saveOrders(); renderOrders(); renderKpi(); }
+});
+
+$("#dlTrace").addEventListener("click", ()=>{
+  if(!TRACE) return;
+  const blob = new Blob([JSON.stringify({lot:CURRENT&&CURRENT.id, steps:TRACE.steps}, null, 2)],
+                        {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "agent_trace.json"; a.click();
+});
+
+$("#kbQuery").addEventListener("input", ()=>{ renderKb($("#kbQuery").value); });
+function renderKb(q){
+  const hits = kbSearch(q, 5);
+  $("#kbResults").innerHTML = hits.length
+    ? hits.map(h=>`<div class="ev"><b>${esc(h.d.doc)} · ${esc(h.d.section)}</b>
+        <span class="badge b-low" style="margin-left:8px">相关度 ${h.score.toFixed(3)}</span>
+        <p>${esc(h.d.text.slice(0,420))}${h.d.text.length>420?"…":""}</p></div>`).join("")
+    : `<div class="empty"><span class="ico">🔎</span>没有找到相关条目，换个关键词试试</div>`;
+}
+
+/* ------------------------------------------------------------ 模型评估 */
+function metricRows(m){
+  const rows = [
+    ["PR-AUC", "pr_auc", v=>v.toFixed(4)],
+    ["ROC-AUC", "roc_auc", v=>v.toFixed(4)],
+    ["Recall（召回率）", "recall", v=>v.toFixed(4)],
+    ["Precision（精确率）", "precision", v=>v.toFixed(4)],
+    ["F1", "f1", v=>v.toFixed(4)],
+    ["平衡准确率", "balanced_accuracy", v=>v.toFixed(4)],
+    ["报警比例", "alarm_rate", v=>pct(v)],
+    ["混淆矩阵 TP/FP/FN/TN", "confusion", v=>v?`${v.tp} / ${v.fp} / ${v.fn} / ${v.tn}`:"—"],
+  ];
+  return rows.map(([label,key,fmt])=>{
+    const raw = m[key];
+    if(raw===undefined) return "";
+    return `<tr><td>${label}</td><td class="n"><b>${typeof raw==="number"?fmt(raw):fmt(raw)}</b></td></tr>`;
+  }).join("");
+}
+function drawCurve(svgId, data, xLabel, yLabel){
+  const W=500, H=330, L=56, R=20, T=18, Bm=42;
+  if(!data || !data.length){ $(svgId).innerHTML = ""; return; }
+  const X = v => L + v*(W-L-R), Y = v => T + (1-v)*(H-T-Bm);
+  let s = "";
+  for(let i=0;i<=4;i++){
+    const v=i/4;
+    s += `<line x1="${L}" y1="${Y(v).toFixed(1)}" x2="${W-R}" y2="${Y(v).toFixed(1)}" stroke="#eef2f8"/>`;
+    s += `<line x1="${X(v).toFixed(1)}" y1="${T}" x2="${X(v).toFixed(1)}" y2="${H-Bm}" stroke="#eef2f8"/>`;
+    s += `<text x="${L-9}" y="${(Y(v)+3).toFixed(1)}" text-anchor="end" font-size="10" fill="#94a3b8">${v.toFixed(1)}</text>`;
+    s += `<text x="${X(v).toFixed(1)}" y="${H-Bm+18}" text-anchor="middle" font-size="10" fill="#94a3b8">${v.toFixed(1)}</text>`;
+  }
+  s += `<line x1="${L}" y1="${T}" x2="${L}" y2="${H-Bm}" stroke="#cbd5e1"/>`;
+  s += `<line x1="${L}" y1="${H-Bm}" x2="${W-R}" y2="${H-Bm}" stroke="#cbd5e1"/>`;
+  const pts = data.map(([a,b])=>`${X(a).toFixed(1)},${Y(b).toFixed(1)}`).join(" ");
+  s += `<polyline points="${pts}" fill="none" stroke="#1f5fbf" stroke-width="2.4" stroke-linejoin="round"/>`;
+  s += `<text x="${(L+W-R)/2}" y="${H-4}" text-anchor="middle" font-size="11" fill="#5b6675">${xLabel}</text>`;
+  s += `<text x="14" y="${T+12}" font-size="11" fill="#5b6675">${yLabel}</text>`;
+  $(svgId).innerHTML = s;
+}
+function renderEval(){
+  $("#cvTable").innerHTML = `<tr><th>指标</th><th>数值</th></tr>` + metricRows(M.cv);
+  $("#hoTable").innerHTML = `<tr><th>指标</th><th>数值</th></tr>` + metricRows(M.holdout);
+  drawCurve("#prChart", P.curves.pr, "Recall", "Precision");
+  drawCurve("#rocChart", P.curves.roc, "False Positive Rate", "True Positive Rate");
+  const rows = ["高","中","低"].map(k=>{
+    const arr = P.lots.filter(l=>l.level===k);
+    const pos = arr.filter(l=>l.y===1).length;
+    return {k, n:arr.length, pos, rate: arr.length? pos/arr.length : 0};
+  });
+  $("#levelTable").innerHTML = `<tr><th>风险等级</th><th>批次数</th><th>真实异常数</th><th>异常率</th></tr>` +
+    rows.map(r=>`<tr><td><span class="badge ${LEVEL_CLASS[r.k]}">${r.k}</span></td>
+      <td class="n">${r.n}</td><td class="n">${r.pos}</td><td class="n"><b>${pct(r.rate,2)}</b></td></tr>`).join("");
+  const hi = rows.find(r=>r.k==="高");
+  if(hi) $("#levelNote").textContent =
+    `“高”档的异常率约为基准不良率（${pct(M.baseRate,2)}）的 ${(hi.rate/M.baseRate).toFixed(1)} 倍，` +
+    `说明风险排序有效；绝对准确率受 SECOM 本身可分性限制，这也是该数据集的公开水平。`;
+}
+
+/* ---------------------------------------------------------------- 初始化 */
+function init(){
+  renderChips();
+  buildKbIndex();
+  renderBiz();
+  CURRENT = P.lots.slice(-300).slice().sort((a,b)=>b.risk-a.risk)[0] || P.lots[P.lots.length-1];
+  renderLotOptions();
+  $("#lotSel").value = CURRENT.id;
+  renderKpi();
+  renderLot();
+  renderTrace();
+  renderOrders();
+  renderKb($("#kbQuery").value);
+  renderEval();
+  $("#kbInfo").textContent =
+    `检索后端：浏览器内字符 n-gram 相似度　·　知识条目：${P.docs.length} 条　·　` +
+    `知识来源：依据公开设备维护规范与学术文献整理的内部 SOP 样例`;
+}
+window.addEventListener("resize", ()=>drawScatter());
+init();
+</script>
+</body>
+</html>

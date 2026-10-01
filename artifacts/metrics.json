@@ -1,0 +1,57 @@
+{
+  "trained_at": "2026-09-29T15:27:17+00:00",
+  "dataset": "UCI SECOM (id=179) · 1567 样本 × 591 变量 · CC BY 4.0",
+  "model_kind": "xgboost",
+  "ensemble_size": 5,
+  "n_samples": 1567,
+  "n_features": 468,
+  "n_positives": 104,
+  "base_rate": 0.0664,
+  "cv": {
+    "pr_auc": 0.1746,
+    "roc_auc": 0.7123,
+    "recall": 0.3365,
+    "precision": 0.1989,
+    "f1": 0.25,
+    "balanced_accuracy": 0.6201,
+    "confusion": {
+      "tn": 1322,
+      "fp": 141,
+      "fn": 69,
+      "tp": 35
+    },
+    "threshold": 0.15,
+    "alarm_rate": 0.1123
+  },
+  "holdout": {
+    "pr_auc": 0.067,
+    "roc_auc": 0.5729,
+    "recall": 0.0,
+    "precision": 0.0,
+    "f1": 0.0,
+    "balanced_accuracy": 0.4966,
+    "confusion": {
+      "tn": 442,
+      "fp": 3,
+      "fn": 26,
+      "tp": 0
+    },
+    "threshold": 0.15,
+    "alarm_rate": 0.0064
+  },
+  "thresholds": {
+    "cv_threshold": 0.15,
+    "operational_threshold": 0.15,
+    "ensemble_threshold": 0.15,
+    "high_threshold": 0.2795,
+    "deployed_alarm_rate": 0.1123
+  },
+  "protocol": {
+    "primary": "stratified 5-fold cross validation（袋外预测）",
+    "drift_check": "time-ordered 70/30 holdout",
+    "n_train": 1096,
+    "n_test": 471,
+    "n_pos_train": 78,
+    "n_pos_test": 26
+  }
+}
