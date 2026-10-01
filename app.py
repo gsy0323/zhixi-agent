@@ -98,6 +98,178 @@ def pretty_lot(row) -> str:
     return f"{row['lot_id']} ｜ {row['timestamp']:%m-%d %H:%M} ｜ 风险 {row['risk']:.1%} ｜ {row['level']}"
 
 
+THEME_CSS = """
+<style>
+  :root{
+    --zx-bg:#eef2f8; --zx-surface:#fff; --zx-line:#e2e8f2; --zx-line2:#cfd8e6;
+    --zx-ink:#0f1720; --zx-ink2:#334155; --zx-muted:#64748b; --zx-faint:#94a3b8;
+    --zx-brand:#1f5fbf; --zx-brand2:#2a7fd4; --zx-tint:#eaf1fd;
+    --zx-high:#dc4c4c; --zx-mid:#e2922f; --zx-ok:#2f9e6f;
+    --zx-sh:0 1px 2px rgba(15,32,64,.05), 0 1px 3px rgba(15,32,64,.04);
+    --zx-sh2:0 2px 6px rgba(15,32,64,.06), 0 10px 26px rgba(15,32,64,.06);
+  }
+  .stApp{ background:var(--zx-bg); }
+  header[data-testid="stHeader"]{ background:transparent; }
+  .block-container{ padding-top:1.2rem; padding-bottom:3rem; max-width:1400px; }
+
+  /* 顶部横幅 */
+  .zx-banner{
+    position:relative; overflow:hidden; border-radius:16px; padding:26px 28px 22px; color:#fff;
+    background:linear-gradient(118deg,#0f2a52 0%,#1f5fbf 52%,#2f88d8 100%);
+    box-shadow:var(--zx-sh2); margin-bottom:20px;
+  }
+  .zx-banner::after{
+    content:""; position:absolute; width:520px; height:520px; right:-150px; top:-300px;
+    background:radial-gradient(circle,rgba(255,255,255,.20),transparent 66%);
+  }
+  .zx-brandrow{ position:relative; z-index:1; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .zx-mark{ width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:21px;
+            background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.3); }
+  .zx-title{ font-size:23px; font-weight:700; letter-spacing:.4px; }
+  .zx-live{ display:inline-flex; align-items:center; gap:7px; font-size:12px;
+            background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.26);
+            border-radius:999px; padding:4px 12px 4px 10px; }
+  .zx-dot{ width:7px;height:7px;border-radius:50%;background:#5ee6a8;box-shadow:0 0 0 0 rgba(94,230,168,.7);
+           animation:zxpulse 2.2s infinite; }
+  @keyframes zxpulse{70%{box-shadow:0 0 0 8px rgba(94,230,168,0)}100%{box-shadow:0 0 0 0 rgba(94,230,168,0)}}
+  .zx-sub{ position:relative; z-index:1; margin:10px 0 0; font-size:13px; line-height:1.75; opacity:.92; max-width:960px; }
+  .zx-chips{ position:relative; z-index:1; display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .zx-chip{ background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22);
+            border-radius:999px; padding:5px 13px; font-size:12px; }
+
+  /* KPI 卡片 */
+  .zx-kpirow{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:8px; }
+  @media(max-width:1000px){ .zx-kpirow{ grid-template-columns:repeat(2,1fr); } }
+  .zx-kpi{ position:relative; overflow:hidden; background:var(--zx-surface); border:1px solid var(--zx-line);
+           border-radius:14px; padding:14px 16px; box-shadow:var(--zx-sh); }
+  .zx-kpi::after{ content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--c,#1f5fbf); }
+  .zx-kpi .k{ font-size:12px; color:var(--zx-muted); }
+  .zx-kpi .v{ font-size:23px; font-weight:700; margin-top:5px; line-height:1.25; letter-spacing:.2px; }
+
+  /* 卡片容器 */
+  div[data-testid="stVerticalBlockBorderWrapper"]{
+    background:var(--zx-surface); border:1px solid var(--zx-line); border-radius:14px;
+    box-shadow:var(--zx-sh2); padding:8px 14px;
+  }
+  /* 标签页 */
+  .stTabs [data-baseweb="tab-list"]{ gap:4px; border-bottom:1px solid var(--zx-line2); }
+  .stTabs [data-baseweb="tab"]{ font-weight:600; color:var(--zx-muted); padding:10px 16px; }
+  .stTabs [aria-selected="true"]{ color:var(--zx-brand) !important; }
+  /* 按钮 */
+  .stButton > button{ border-radius:9px; font-weight:600; }
+  .stButton > button[kind="primary"]{
+    background:linear-gradient(180deg,var(--zx-brand2),var(--zx-brand)); border:none;
+    box-shadow:0 2px 8px rgba(31,95,191,.28);
+  }
+  .stButton > button[kind="secondary"]{ border:1px solid var(--zx-brand); color:var(--zx-brand); background:#fff; }
+  /* 指标（侧边栏） */
+  [data-testid="stMetricValue"]{ font-size:19px; font-weight:700; }
+  [data-testid="stMetricLabel"]{ font-size:12px; color:var(--zx-muted); }
+  /* 输入控件 */
+  .stTextInput input, .stSelectbox div[data-baseweb="select"] > div{ border-radius:9px; }
+  /* 展开器（执行轨迹） */
+  div[data-testid="stExpander"]{
+    border:1px solid var(--zx-line); border-radius:12px; background:#fff; box-shadow:var(--zx-sh); margin-bottom:8px;
+  }
+  div[data-testid="stExpander"] summary{ font-weight:600; }
+  /* 表格 */
+  [data-testid="stDataFrame"]{ border-radius:10px; border:1px solid var(--zx-line); }
+  /* 提示框 */
+  div[data-testid="stAlert"]{ border-radius:10px; }
+  /* 进度条 */
+  .stProgress > div > div > div > div{ background:linear-gradient(90deg,#2f9e6f,#e2922f,#dc4c4c); }
+  /* 风险仪表 */
+  .zx-gauge{ display:flex; align-items:center; gap:20px; flex-wrap:wrap; }
+  .zx-gauge svg{ flex:0 0 200px; }
+  .zx-risknum{ font-size:38px; font-weight:800; line-height:1.05; letter-spacing:-.5px; }
+  .zx-badge{ display:inline-block; padding:3px 11px; border-radius:999px; font-size:12px; font-weight:700; }
+  .zx-b-high{ background:#fdecec; color:#dc4c4c; }
+  .zx-b-mid{ background:#fdf2e2; color:#a5701a; }
+  .zx-b-low{ background:#eef1f6; color:#5b6675; }
+  /* 方案卡 */
+  .zx-opt{ position:relative; border:1.5px solid var(--zx-line); border-radius:14px; padding:16px; background:#fff; height:100%; }
+  .zx-opt.best{ border-color:var(--zx-ok); box-shadow:0 6px 22px rgba(47,158,111,.16); }
+  .zx-opt .rb{ position:absolute; top:-11px; right:14px; background:var(--zx-ok); color:#fff;
+               font-size:11px; font-weight:700; padding:3px 11px; border-radius:999px; }
+  .zx-opt .tag{ font-size:12px; font-weight:700; color:var(--zx-muted); }
+  .zx-opt .nm{ font-size:15px; font-weight:700; margin:6px 0 10px; }
+  .zx-opt .cost{ font-size:24px; font-weight:800; }
+  .zx-opt .cost small{ font-size:12px; color:var(--zx-muted); font-weight:600; margin-left:4px; }
+  .zx-opt .dt{ font-size:12px; color:var(--zx-muted); line-height:1.9; margin-top:10px;
+               border-top:1px dashed var(--zx-line); padding-top:9px; }
+  .zx-opt .dt span{ float:right; color:var(--zx-ink2); }
+  /* 步骤标签 */
+  .zx-b-pre{ background:#eef1f6; color:#5b6675; }
+  .zx-b-live{ background:#e6f7ef; color:#2f9e6f; }
+</style>
+"""
+
+
+def gauge_svg(value: float, threshold: float, level: str) -> str:
+    """半圆风险仪表盘（与单文件 HTML 版同一套视觉）。"""
+
+    import math
+
+    cx, cy, r = 105, 100, 78
+    v = min(max(float(value), 0.0), 1.0)
+    ang = v * 180
+    color = {"高": "#dc4c4c", "中": "#e2922f", "低": "#2f9e6f"}.get(level, "#2f9e6f")
+    th = min(max(float(threshold), 0.0), 1.0) * 180
+
+    def arc(a0: float, a1: float) -> str:
+        ra0, ra1 = math.radians(a0 - 180), math.radians(a1 - 180)
+        x0, y0 = cx + r * math.cos(ra0), cy + r * math.sin(ra0)
+        x1, y1 = cx + r * math.cos(ra1), cy + r * math.sin(ra1)
+        large = 1 if (a1 - a0) > 180 else 0
+        return f"M {x0:.2f},{y0:.2f} A {r},{r} 0 {large} 1 {x1:.2f},{y1:.2f}"
+
+    tx = cx + (r + 13) * math.cos(math.radians(th - 180))
+    ty = cy + (r + 13) * math.sin(math.radians(th - 180))
+    return f"""
+    <svg viewBox="0 0 210 132" width="200" height="126">
+      <path d="{arc(0,180)}" fill="none" stroke="#e6ebf3" stroke-width="15" stroke-linecap="round"/>
+      <path d="{arc(0, max(ang, 0.6))}" fill="none" stroke="{color}" stroke-width="15" stroke-linecap="round"/>
+      <line x1="{cx}" y1="{cy}" x2="{tx:.1f}" y2="{ty:.1f}" stroke="#334155" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="{cx}" cy="{cy}" r="5" fill="#334155"/>
+      <text x="{cx-r}" y="{cy+22}" font-size="10" fill="#94a3b8" text-anchor="middle">0%</text>
+      <text x="{cx+r}" y="{cy+22}" font-size="10" fill="#94a3b8" text-anchor="middle">100%</text>
+    </svg>"""
+
+
+def kpi_cards(items: list[tuple[str, str, str]]) -> None:
+    """items: [(标题, 数值, 颜色)]"""
+
+    cards = "".join(
+        f'<div class="zx-kpi" style="--c:{color}"><div class="k">{title}</div>'
+        f'<div class="v">{value}</div></div>'
+        for title, value, color in items
+    )
+    st.markdown(f'<div class="zx-kpirow">{cards}</div>', unsafe_allow_html=True)
+
+
+def render_banner(chips: list[str]) -> None:
+    chip_html = "".join(f'<span class="zx-chip">{c}</span>' for c in chips)
+    st.markdown(
+        f"""
+        <div class="zx-banner">
+          <div class="zx-brandrow">
+            <div class="zx-mark">🏭</div>
+            <div class="zx-title">智维Agent</div>
+            <div class="zx-live"><span class="zx-dot"></span>模型已加载 · 可交互</div>
+          </div>
+          <div class="zx-sub">从“设备报警”到“诊断—决策—工单—复盘”的完整闭环。
+            数据来源：UCI SECOM 半导体前道工序数据集（1567 批次 × 591 路工艺信号，CC BY 4.0）。
+            变量为匿名过程测量点，已按相关性聚为 12 个工序信号簇（工序站 A–L）。</div>
+          <div class="zx-chips">{chip_html}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+st.markdown(THEME_CSS, unsafe_allow_html=True)
+
+
 # ------------------------------------------------------------------ 侧边栏
 with st.sidebar:
     st.title("🏭 智维Agent")
@@ -163,27 +335,42 @@ with st.sidebar:
             st.rerun()
 
 
-# ------------------------------------------------------------ 顶部指标区
-st.title("智维Agent —— 从“设备报警”到“诊断—决策—工单—复盘”的闭环")
-st.caption(
-    "数据来源：UCI SECOM 半导体前道工序数据集（1567 批次 × 591 路工艺信号，CC BY 4.0）。"
-    "变量为匿名过程测量点，已按相关性聚为 12 个工序信号簇（工序站 A–L）。"
-)
-
+# ------------------------------------------------------------ 顶部横幅与指标
 state = st.session_state.get("state", {})
 config = st.session_state.get("config")
 next_nodes = st.session_state.get("next", [])
-
 risk = state.get("risk") or {}
 orders = db.list_work_orders(limit=200)
-cols = st.columns(5)
-cols[0].metric("当前批次", state.get("lot_id", "—"))
-cols[1].metric("异常概率", f"{risk.get('risk', 0):.1%}" if risk else "—")
-cols[2].metric("风险等级", risk.get("level", "—") if risk else "—")
-cols[3].metric(
-    "触发阈值", f"{metrics['thresholds']['operational_threshold']:.1%}" if metrics else "—"
-)
-cols[4].metric("工单总数", len(orders))
+
+_thr = metrics["thresholds"]["operational_threshold"] if metrics else 0.5
+render_banner([
+    f"模型：{metrics.get('model_kind', 'xgboost')} × {metrics.get('ensemble_size', 5)} 集成" if metrics else "模型：未加载",
+    f"样本：{metrics.get('n_samples', 1567)} 批次 × {metrics.get('n_features', 468)} 路信号",
+    f"异常批次：{metrics.get('n_positives', 104)}（{metrics.get('base_rate', 0.0664):.1%}）",
+    f"PR-AUC：{metrics.get('cv', {}).get('pr_auc', 0):.3f}",
+    f"Recall：{metrics.get('cv', {}).get('recall', 0):.3f}",
+    f"F1：{metrics.get('cv', {}).get('f1', 0):.3f}",
+    f"触发阈值：{_thr:.1%}",
+])
+
+# 还没跑诊断时，先用默认选中批次的信息填充 KPI，避免整排显示"—"
+_fallback_id = state.get("lot_id") or toolbox.top_risk_lot(window=300)
+_fb = lots.loc[lots["lot_id"] == _fallback_id]
+_fb_risk = float(_fb["risk"].iloc[0]) if len(_fb) else 0.0
+_fb_level = str(_fb["level"].iloc[0]) if len(_fb) else "—"
+_cur_id = state.get("lot_id") or _fallback_id
+_cur_risk = float(risk.get("risk", _fb_risk)) if risk else _fb_risk
+_cur_level = str(risk.get("level", _fb_level)) if risk else _fb_level
+
+_level = _cur_level
+kpi_cards([
+    ("当前批次", _cur_id, "#1f5fbf"),
+    ("异常概率", f"{_cur_risk:.1%}",
+     {"高": "#dc4c4c", "中": "#e2922f", "低": "#94a3b8"}.get(_level, "#1f5fbf")),
+    ("风险等级", _level, {"高": "#dc4c4c", "中": "#e2922f", "低": "#94a3b8"}.get(_level, "#1f5fbf")),
+    ("触发阈值", f"{_thr:.1%}", "#e2922f"),
+    ("工单总数", f"{len(orders)} 条", "#2f9e6f"),
+])
 
 if next_nodes:
     st.warning("⏸ 智能体已暂停，等待人工确认（LangGraph interrupt）—— 请到「③ 决策与工单」页确认。")
@@ -233,18 +420,45 @@ with tab_monitor:
     lot_row = lots.loc[picked]
     with left:
         st.subheader("批次风险")
-        st.progress(min(max(float(lot_row["risk"]), 0.0), 1.0))
-        st.caption(
-            f"袋外评分 {lot_row['risk']:.2%}｜集成实时评分 {lot_row['risk_ensemble']:.2%}｜"
-            f"等级 {lot_row['level']}｜真实标签 "
-            f"{'异常' if lot_row['y_true'] == 1 else '正常'}"
-            "（真实标签仅用于演示核对，智能体看不到）"
+        _lv = str(lot_row["level"])
+        _lvcolor = {"高": "#dc4c4c", "中": "#e2922f", "低": "#94a3b8"}.get(_lv, "#94a3b8")
+        _badge = {"高": "zx-b-high", "中": "zx-b-mid", "低": "zx-b-low"}.get(_lv, "zx-b-low")
+        _true = "异常" if lot_row["y_true"] == 1 else "正常"
+        _truecolor = "#dc4c4c" if lot_row["y_true"] == 1 else "#2f9e6f"
+        _raw = toolbox.X_raw.loc[int(lot_row["row_index"])]
+        _z = ((_raw - toolbox.explainer.mean) / toolbox.explainer.std).reindex(
+            toolbox.model.feature_names
+        ).fillna(0.0)
+        _top_feat = str(_z.abs().idxmax())
+        _suspect = toolbox.model.preprocess.group_of(_top_feat)
+        st.markdown(
+            f"""
+            <div class="zx-gauge">
+              {gauge_svg(float(lot_row['risk']), float(_thr), _lv)}
+              <div style="flex:1;min-width:190px">
+                <div class="zx-risknum" style="color:{_lvcolor}">{lot_row['risk']:.1%}</div>
+                <div style="margin-top:8px">
+                  <span class="zx-badge {_badge}">风险等级 {_lv}</span>
+                  <span class="zx-badge zx-b-low" style="margin-left:6px">触发阈值 {_thr:.1%}</span>
+                </div>
+                <div style="font-size:12.5px;color:#64748b;margin-top:8px">
+                  袋外评分 {lot_row['risk']:.2%}　·　集成实时评分 {lot_row['risk_ensemble']:.2%}</div>
+              </div>
+            </div>
+            <div style="font-size:12.5px;color:#64748b;line-height:1.9;margin-top:14px;
+                        padding-top:12px;border-top:1px solid #e2e8f2">
+              批次编号 <b>{lot_row['lot_id']}</b>　·　时间 {lot_row['timestamp']}<br>
+                  疑似工序站 <b style="color:#1f5fbf">{_suspect}</b>
+              　·　真实标签 <b style="color:{_truecolor}">{_true}</b>
+              <span style="color:#94a3b8">（真实标签仅用于演示核对，智能体看不到）</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
         raw_row = toolbox.X_raw.loc[int(lot_row["row_index"])]
-        z = (
-            (raw_row - toolbox.explainer.mean)
-            / toolbox.explainer.std
-        ).reindex(toolbox.model.feature_names).fillna(0.0)
+        z = ((raw_row - toolbox.explainer.mean) / toolbox.explainer.std).reindex(
+            toolbox.model.feature_names
+        ).fillna(0.0)
         top = z.abs().sort_values(ascending=False).head(15).index[::-1]
         fig = go.Figure(
             go.Bar(
@@ -344,26 +558,50 @@ with tab_decision:
 
     if decision.get("options"):
         st.subheader("维保方案模拟对比")
-        st.dataframe(
-            pd.DataFrame(decision["options"])[
-                ["id", "name", "expected_cost", "quality_loss", "downtime_cost",
-                 "delay_risk_cost", "downtime_hours", "note"]
-            ].rename(
-                columns={
-                    "id": "方案",
-                    "name": "方案名称",
-                    "expected_cost": "期望代价(元)",
-                    "quality_loss": "质量损失(元)",
-                    "downtime_cost": "停机损失(元)",
-                    "delay_risk_cost": "交期风险(元)",
-                    "downtime_hours": "停机时长(h)",
-                    "note": "说明",
-                }
-            ),
-            hide_index=True,
-            **_W,
+        _opts = decision["options"]
+        _best_id = decision.get("recommended")
+        _ocols = st.columns(len(_opts))
+        for _col, _o in zip(_ocols, _opts):
+            _is_best = _o["id"] == _best_id
+            _col.markdown(
+                f"""
+                <div class="zx-opt {'best' if _is_best else ''}">
+                  {'<span class="rb">推荐</span>' if _is_best else ''}
+                  <div class="tag">方案 {_o['id']}</div>
+                  <div class="nm">{_o['name']}</div>
+                  <div class="cost">¥{_o['expected_cost']:,.0f}<small>期望代价</small></div>
+                  <div class="dt">
+                    质量损失<span>¥{_o['quality_loss']:,.0f}</span><br>
+                    停机损失<span>¥{_o['downtime_cost']:,.0f}</span><br>
+                    交期风险<span>¥{_o['delay_risk_cost']:,.0f}</span><br>
+                    停机时长<span>{_o['downtime_hours']} h</span>
+                  </div>
+                  <div style="font-size:12px;color:#64748b;margin-top:9px">{_o['note']}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        _worst = max(_opts, key=lambda o: o["expected_cost"])
+        _best = next(o for o in _opts if o["id"] == _best_id)
+        _a = decision.get("assumptions", {})
+        _param_txt = "　·　".join([
+            f"单批次产值 ¥{_a.get('batch_value', 0):,.0f}",
+            f"停机损失 ¥{_a.get('downtime_cost_per_hour', 0):,.0f}/小时",
+            f"检修工时 {_a.get('repair_hours', 0)} 小时",
+            f"班次剩余 {_a.get('shift_hours', 0)} 小时",
+            f"返工可挽回 {_a.get('rework_recovery_ratio', 0):.0%}",
+            f"基准不良率 {_a.get('baseline_defect_rate', 0):.1%}",
+            f"检修有效性 {_a.get('repair_effectiveness', 0):.0%}",
+            f"延期罚金 ¥{_a.get('delay_penalty', 0):,.0f}",
+            f"非计划停机成本上浮 {(_a.get('emergency_stop_multiplier', 1) - 1):.0%}",
+        ])
+        st.markdown(
+            f"<div style='font-size:12.5px;color:#64748b;line-height:1.9;margin-top:14px'>"
+            f"优选方案 <b style='color:#2f9e6f'>{_best['name']}</b>，比最差方案节省 "
+            f"<b>¥{_worst['expected_cost'] - _best['expected_cost']:,.0f}</b>。"
+            f"<br>模拟参数：{_param_txt}。<b>以上均为演示假设值，结果为模拟估算。</b></div>",
+            unsafe_allow_html=True,
         )
-        st.caption("模拟参数：" + json.dumps(decision.get("assumptions", {}), ensure_ascii=False))
 
     if proposal:
         st.subheader("智能体建议")
