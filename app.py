@@ -247,6 +247,99 @@ def kpi_cards(items: list[tuple[str, str, str]]) -> None:
     st.markdown(f'<div class="zx-kpirow">{cards}</div>', unsafe_allow_html=True)
 
 
+def confusion_table(c: dict, note: str = "") -> None:
+    """把混淆矩阵渲染成表格，而不是原始的 JSON 代码块。"""
+
+    tn, fp = int(c.get("tn", 0)), int(c.get("fp", 0))
+    fn, tp = int(c.get("fn", 0)), int(c.get("tp", 0))
+    cell = 'style="border-radius:9px;text-align:center;padding:9px 6px;{bg}"'
+
+    def td(value: int, label: str, good: bool) -> str:
+        bg = "#f1fbf6" if good else "#fdf2e2"
+        color = "#2f9e6f" if good else "#a5701a"
+        return (
+            f'<td style="border-radius:9px;text-align:center;padding:9px 6px;background:{bg}">'
+            f'<b style="font-size:17px;color:{color}">{value}</b>'
+            f'<div style="font-size:11px;color:#64748b;margin-top:2px">{label}</div></td>'
+        )
+
+    st.markdown(
+        f"""
+        <div style="margin-top:12px">
+          <div style="font-size:12px;color:#64748b;margin-bottom:6px">混淆矩阵{(' · ' + note) if note else ''}</div>
+          <table style="width:100%;border-collapse:separate;border-spacing:4px;font-size:12.5px">
+            <tr>
+              <td style="color:#94a3b8;font-size:11px"></td>
+              <td style="text-align:center;color:#64748b;font-size:11.5px">预测正常</td>
+              <td style="text-align:center;color:#64748b;font-size:11.5px">预测异常</td>
+            </tr>
+            <tr>
+              <td style="color:#64748b;white-space:nowrap">实际正常</td>
+              {td(tn, "TN 正确放行", True)}
+              {td(fp, "FP 误报", False)}
+            </tr>
+            <tr>
+              <td style="color:#64748b;white-space:nowrap">实际异常</td>
+              {td(fn, "FN 漏报", False)}
+              {td(tp, "TP 正确拦截", True)}
+            </tr>
+          </table>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+_METRIC_ROWS = [
+    ("pr_auc", "PR-AUC", "{:.4f}"),
+    ("roc_auc", "ROC-AUC", "{:.4f}"),
+    ("recall", "召回率 Recall", "{:.4f}"),
+    ("precision", "精确率 Precision", "{:.4f}"),
+    ("f1", "F1", "{:.4f}"),
+    ("balanced_accuracy", "平衡准确率", "{:.4f}"),
+    ("threshold", "风险阈值", "{:.1%}"),
+    ("alarm_rate", "报警比例", "{:.1%}"),
+]
+
+
+def metric_table(m: dict) -> None:
+    """用中文字段名展示指标，避免出现 pr_auc 这类代码风格列名。"""
+
+    rows = [
+        {"指标": label, "数值": fmt.format(float(m[key]))}
+        for key, label, fmt in _METRIC_ROWS
+        if key in m and m[key] is not None
+    ]
+    st.dataframe(pd.DataFrame(rows), hide_index=True, **_W)
+
+
+def scan_result_block(scan: dict) -> None:
+    """把批次巡检结果渲染成卡片式列表，而不是原始 JSON。"""
+
+    rows = "".join(
+        f'<div style="display:flex;justify-content:space-between;padding:7px 12px;'
+        f'border-bottom:1px solid #eef2f8;font-size:13px">'
+        f'<span><b>{i["lot_id"]}</b>'
+        f'<span style="color:#94a3b8;margin-left:10px">{i["timestamp"]}</span></span>'
+        f'<b style="color:#dc4c4c">{i["risk"]:.1%}</b></div>'
+        for i in scan.get("high_risk_lots", [])
+    )
+    suggested = scan.get("suggested_lot")
+    st.markdown(
+        f"""
+        <div style="border:1px solid #e2e8f2;border-radius:12px;overflow:hidden;background:#fff">
+          <div style="background:#f7f9fc;padding:11px 14px;font-size:13px;font-weight:700">
+            扫描最近 {scan.get('n_lots', 0)} 个批次，其中高风险
+            <span style="color:#dc4c4c">{scan.get('n_high_risk', 0)}</span> 个
+          </div>
+          {rows}
+        </div>
+        {f'<div style="font-size:13px;color:#64748b;margin-top:10px">建议优先排查：<b style="color:#1f5fbf">{suggested}</b></div>' if suggested else ''}
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_banner(chips: list[str]) -> None:
     chip_html = "".join(f'<span class="zx-chip">{c}</span>' for c in chips)
     st.markdown(
@@ -501,7 +594,7 @@ with tab_monitor:
         st.info(state["report"])
     if state.get("scan"):
         st.subheader("批次巡检结果")
-        st.json(state["scan"])
+        scan_result_block(state["scan"])
 
 
 # -------------------------------------------------------- ② 执行轨迹
@@ -680,22 +773,12 @@ with tab_eval:
         c1, c2 = st.columns(2)
         with c1:
             st.markdown("**主协议：分层 5 折交叉验证（袋外预测）**")
-            st.dataframe(
-                pd.DataFrame([metrics["cv"]])
-                .T.drop(index=["confusion"], errors="ignore")
-                .rename(columns={0: "数值"}),
-                **_W,
-            )
-            st.json(metrics["cv"]["confusion"])
+            metric_table(metrics["cv"])
+            confusion_table(metrics["cv"]["confusion"], "袋外预测")
         with c2:
             st.markdown("**漂移检查：按时间切分留出集**")
-            st.dataframe(
-                pd.DataFrame([metrics["holdout"]])
-                .T.drop(index=["confusion"], errors="ignore")
-                .rename(columns={0: "数值"}),
-                **_W,
-            )
-            st.json(metrics["holdout"]["confusion"])
+            metric_table(metrics["holdout"])
+            confusion_table(metrics["holdout"]["confusion"], "时间留出集")
             st.caption(
                 "时间留出集明显劣化，说明 SECOM 存在真实的时间漂移（工艺与设备状态随时间变化）。"
                 "这正是上线时必须做滚动重训与阈值在线校准的原因。"
