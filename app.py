@@ -785,16 +785,19 @@ with tab_eval:
             )
 
         st.markdown("**PR 曲线（时间留出集）**")
-        st.line_chart(pd.read_csv(PR_CURVE_PATH), x="recall", y="precision")
+        _pr = pd.read_csv(PR_CURVE_PATH).rename(columns={"recall": "召回率 Recall", "precision": "精确率 Precision"})
+        st.line_chart(_pr, x="召回率 Recall", y="精确率 Precision")
 
         st.markdown("**风险等级分层效果（历史批次，袋外评分）**")
-        st.dataframe(
+        _lv = (
             lots.groupby("level")["y_true"]
             .agg(批次数="count", 真实异常数="sum", 异常率="mean")
             .assign(异常率=lambda d: (d["异常率"] * 100).round(2))
-            .rename(columns={"异常率": "异常率(%)"}),
-            **_W,
+            .rename(columns={"异常率": "异常率(%)"})
+            .rename_axis("风险等级")
+            .reset_index()
         )
+        st.dataframe(_lv, hide_index=True, **_W)
         st.caption(
             f"“高”档的异常率约为基准不良率（{metrics['base_rate']:.1%}）的 "
             f"{lots[lots['level'] == '高']['y_true'].mean() / metrics['base_rate']:.1f} 倍，"
